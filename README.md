@@ -5,8 +5,11 @@ Adding the **sam_the_admin_maq** when **MachineAccountQuota=0**
 
 #### 改动
 在原项目：[sam-the-admin](https://github.com/WazeHell/sam-the-admin)中，maq等于0也就是域用户没有权限添加机器用户的时候无法进行利用
+
 在当前项目添加了maq为0时的自动化利用，通过获取域用户修改已存在的机器用户samname进行利用
+
 在脚本中已加入自动修改机器用户的ntlm功能以获取TGT，并在利用完成后对机器用户的ntlm和spn自动进行恢复
+
 > 在进行ntlm恢复的时候需要手动输入机器用户的IP
 
 #### Usage
