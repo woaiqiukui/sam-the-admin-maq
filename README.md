@@ -23,8 +23,7 @@ maq为0
 
 通过sam-the-admin-maq自动化利用
 
-[![asciicast](https://asciinema.org/connect/513aeb1a-5ade-40e8-b358-40e2fa376d6c.png)](https://asciinema.org/connect/513aeb1a-5ade-40e8-b358-40e2fa376d6c)
-
+[![asciicast](https://asciinema.org/a/FoCV2OVZIuQ3zoRTwAEzPKzgO.svg)](https://asciinema.org/a/FoCV2OVZIuQ3zoRTwAEzPKzgO)
 
 #### Check out 
 - [CVE-2021-42287/CVE-2021-42278 Weaponisation ](https://exploit.ph/cve-2021-42287-cve-2021-42278-weaponisation.html)
