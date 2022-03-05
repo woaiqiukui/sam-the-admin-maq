@@ -2,7 +2,6 @@ Exploiting CVE-2021-42278 and CVE-2021-42287 to impersonate DA from standard dom
 
 Adding the **sam_the_admin_maq** when **MachineAccountQuota=0**
 
-[![asciicast](https://asciinema.org/a/SnQ66XtmZLzXZQ8QwWwAYs8Dm.svg)](https://asciinema.org/a/SnQ66XtmZLzXZQ8QwWwAYs8Dm)
 
 #### 改动
 在原项目：[sam-the-admin](https://github.com/WazeHell/sam-the-admin)中，maq等于0也就是域用户没有权限添加机器用户的时候无法进行利用
