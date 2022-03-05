@@ -23,7 +23,7 @@ maq为0
 
 通过sam-the-admin-maq自动化利用
 
-<video src="https://github.com/woaiqiukui/sam-the-admin-maq/blob/master/Usage.mov" controls="controls" width:100% height:auto></video>
+[![asciicast](https://asciinema.org/connect/513aeb1a-5ade-40e8-b358-40e2fa376d6c.png)](https://asciinema.org/connect/513aeb1a-5ade-40e8-b358-40e2fa376d6c)
 
 
 #### Check out 
