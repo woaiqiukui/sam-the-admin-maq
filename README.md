@@ -12,9 +12,11 @@ Adding the **sam_the_admin_maq** when **MachineAccountQuota=0**
 
 #### Usage
 maq为0
+
 <img width="403" alt="image" src="https://user-images.githubusercontent.com/49117752/156877505-c8b1b262-941f-4fa6-a264-94f49ad427bc.png">
 
 使用原版的exp无法进行利用
+
 <img width="1058" alt="image" src="https://user-images.githubusercontent.com/49117752/156877556-c3aa9efb-8fbf-4826-8d76-d7103ca4dd14.png">
 
 通过sam-the-admin-maq自动化利用
