@@ -23,9 +23,8 @@ maq为0
 
 通过sam-the-admin-maq自动化利用
 
-```HTML
 <video src="https://github.com/woaiqiukui/sam-the-admin-maq/blob/master/Usage.mov" controls="controls" width:100% height:auto></video>
-```
+
 
 #### Check out 
 - [CVE-2021-42287/CVE-2021-42278 Weaponisation ](https://exploit.ph/cve-2021-42287-cve-2021-42278-weaponisation.html)
